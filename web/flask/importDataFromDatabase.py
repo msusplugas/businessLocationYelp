@@ -10,6 +10,7 @@ from collections import namedtuple
 from uuid import uuid1
 import operator
 import string
+import collections
 
 PointTuple = namedtuple("PointTuple", ["latitude", "longitude"])
 
@@ -20,8 +21,8 @@ def computeDistanceFromLatitudeLongitude(lon1, lat1, lon2, lat2):
     return round(great_circle((lon1,lat1), (lon2,lat2)).meters, 3)
 
 
-def getCategories(conn, cursor):
-    cursor.execute("SELECT DISTINCT c.name,c.numberofbusinesses FROM categories c, matchingcategories m WHERE c.name = m.initialcategory;")
+def getCategories(conn, cursor, state):
+    cursor.execute("SELECT DISTINCT c.name,c.numberofbusinesses FROM categories c, matchingcategories" + state + " m WHERE c.name = m.initialcategory;")
     listOfCategoriesWithNumberOfBusinesses = cursor.fetchall()
     return listOfCategoriesWithNumberOfBusinesses
 
@@ -117,26 +118,6 @@ def generateClustersOfClustersForTheseDataFromThisDistance(listOfBusinesses, dis
 
         xy = coordinates[class_member_mask & core_samples_mask]
 
-        """
-        for point in xy:
-            print point
-            print "--"
-            print xy
-            pointTuple = PointTuple(latitude = point[0], longitude = point[1])
-            if dictionnaryOfPoints.has_key(pointTuple):
-                categoryName = dictionnaryOfPoints[pointTuple]["categoryName"]
-                #print categoryName
-                id = dictionnaryOfPoints[pointTuple]["id"]
-                if not dictionnaryOfClusters.has_key(categoryName):
-                    dictionnaryOfClusters[categoryName] = {}
-                if dictionnaryOfClusters[categoryName].has_key(id):
-                    dictionnaryOfClusters[categoryName][id].append(point)
-                else:
-                    dictionnaryOfClusters[categoryName][id] = [point]
-                print dictionnaryOfClusters[categoryName][id]
-                die
-        clustersID = uuid1()
-        """
         clusterID = uuid1()
         dictOfClusters[clusterID] = xy
 
@@ -151,14 +132,21 @@ def generateClustersOfClustersForTheseDataFromThisDistance(listOfBusinesses, dis
 4. For each cluster of clusters, compute the ratio which is the sum of the size of the clusters of matching categories divided by the sum of the size of the clusters of the initial categories (= the keywords)
 5. Take the numberOfOpportunities best ratios and return these clusters as the best opportunities
 """
-def getBestBusinessesOpportunities(conn, cursor, categories, distanceCluster, numberOfOpportunities):
+def getBestBusinessesOpportunities(conn, cursor, categories, distanceCluster, numberOfOpportunities, state):
     t0 = time.time()
 
 
-    cursor.execute("SELECT matchingcategoryname, matchingcategorymediandistance, matchingcategoryfrequency, initialcategory FROM matchingcategories WHERE initialcategory = ANY(%s);", (categories,))
+    cursor.execute("SELECT matchingcategoryname, matchingcategorymediandistance, matchingcategoryfrequency, initialcategory FROM matchingcategories" + state +  "  WHERE initialcategory != matchingcategoryname AND initialcategory = ANY(%s);", (categories,))
     matchingCategoryResults = cursor.fetchall()
 
     matchingCategoriesName = np.array(matchingCategoryResults)[:,0]
+    counterOfMatchingCategoriesName = collections.Counter(matchingCategoriesName)
+
+    counterOfMatchingCategoriesNameWithoutInitialCategories =  dict(counterOfMatchingCategoriesName)
+    for category in categories:
+        if counterOfMatchingCategoriesNameWithoutInitialCategories.has_key(category):
+            del counterOfMatchingCategoriesNameWithoutInitialCategories[category]
+
 
 
     uniqueListOfMatchingCategories = set(np.array(matchingCategoryResults)[:,[0]].flat)
@@ -174,16 +162,35 @@ def getBestBusinessesOpportunities(conn, cursor, categories, distanceCluster, nu
         dictionnaryOfBusinessesPerCategory[category] = []
         dictionnaryOfClustersPerCategory[category] = []
 
-    cursor.execute("SELECT business_id, latitude, longitude, name, categories, stars, review_count FROM businesses WHERE categories && ARRAY[%s] ", (listOfCategories,))
+    cursor.execute("SELECT business_id, latitude, longitude, name, categories, stars, review_count FROM businesses" + state + " WHERE categories && ARRAY[%s] ", (listOfCategories,))
     listOfBusinesses = cursor.fetchall()
 
-    dictionnaryOfBusinessesWithPointAsKey = {  PointTuple(latitude = x[1], longitude = x[2]):
-                                                   {"business_id": x[0],
-                                                    "name": filter(lambda x: x in string.printable, x[3]),
-                                                    "categories": x[4],
-                                                    "stars": x[5],
-                                                    "review_count": x[6]
-                                                    } for x in listOfBusinesses}
+    dictionnaryOfOffsets = {} # This is use to offset a little the businesses that are in the exact same position. Otherwise they will not be shown on Google Map.
+    dictionnaryOfBusinessesWithPointAsKey = {}
+    for business in listOfBusinesses:
+        pointTuple = PointTuple(latitude = business[1], longitude = business[2])
+        newBusiness = {"business_id": business[0],
+                       "latitude": business[1],
+                       "longitude": business[2],
+                       "name": filter(lambda x: x in string.printable, business[3]),
+                       "categories": business[4],
+                       "stars": business[5],
+                       "review_count": business[6]
+                       }
+        if dictionnaryOfBusinessesWithPointAsKey.has_key(pointTuple):
+            dictionnaryOfOffsets[pointTuple] += 0.00005
+            newBusiness = {"business_id": business[0],
+                       "latitude": (business[1])+ dictionnaryOfOffsets[pointTuple],
+                       "longitude": business[2] + dictionnaryOfOffsets[pointTuple],
+                       "name": filter(lambda x: x in string.printable, business[3]),
+                       "categories": business[4],
+                       "stars": business[5],
+                       "review_count": business[6]
+                       }
+            dictionnaryOfBusinessesWithPointAsKey[pointTuple].append(newBusiness)
+        else:
+            dictionnaryOfBusinessesWithPointAsKey[pointTuple] = [newBusiness]
+            dictionnaryOfOffsets[pointTuple] = 0
 
 
     for business in listOfBusinesses:
@@ -191,16 +198,6 @@ def getBestBusinessesOpportunities(conn, cursor, categories, distanceCluster, nu
         for category in listOfIntersection:
             dictionnaryOfBusinessesPerCategory[category].append(business)
 
-    """
-    dictionnaryOfPoints = {}
-
-    for category in listOfCategories:
-        listOfBusinessesOfThisCategory = dictionnaryOfBusinessesPerCategory[category]
-        print "generate cluster"
-        cluster = generateClustersForTheseDataFromThisDistance(listOfBusinessesOfThisCategory, distanceCluster, category, dictionnaryOfPoints)
-        dictionnaryOfClustersPerCategory[category] = cluster[0]
-        dictionnaryOfPoints = cluster[1]
-    """
 
     dictOfClustersOfCluster = generateClustersOfClustersForTheseDataFromThisDistance(listOfBusinesses, distanceCluster)
 
@@ -211,33 +208,68 @@ def getBestBusinessesOpportunities(conn, cursor, categories, distanceCluster, nu
     for clusterID in dictOfClustersOfCluster:
         goodForOpportunity = 0
         badForOpportunity = 0
-        newDictForThisClusterID = {}
+        listOfBusinessForThisClusterID = []
+
+        businessListOfThisCluster = []
         for point in dictOfClustersOfCluster[clusterID]:
             pointTuple = PointTuple(latitude = point[0], longitude = point[1])
-            business = dictionnaryOfBusinessesWithPointAsKey[pointTuple]
+            businessListOfThisCluster.extend(dictionnaryOfBusinessesWithPointAsKey[pointTuple])
+        for business in businessListOfThisCluster:
             if bool(set(business["categories"]) & set(categories)):
                 icon = 'static/img/warning.png'
-                badForOpportunity += (np.log(business["stars"]) + 0.1)*np.log(business["review_count"])
+                business["competitor"] = True
+                numberOfCategoriesInCommon = len(set(business["categories"]).intersection(set(categories)))
+                scoreOfThisBusiness =  numberOfCategoriesInCommon*(np.log(business["stars"]) + 0.1)*np.log(business["review_count"])
+                if scoreOfThisBusiness < 1:
+                    badForOpportunity += 1
+                else:
+                    badForOpportunity += scoreOfThisBusiness
+
             else:
+                """
+                strenghOfComplementorCategories represents how strong are these categories as a complementors.
+                It depends of the number of times the category is a complementor of the initial categories.
+                E.g.
+                the initial categories of the user are: ['Restaurants', 'Italian']
+                The complementors of ['Restaurants', 'Italian'] are ['Bars', 'Shopping', 'American (Traditional)', 'Chinese', 'Food', 'Nightlife', 'Burgers', 'Sandwiches', 'Fast Food', 'Mexican', 'Pizza', 'Italian', 'Pizza', 'Food', 'Fast Food', 'Shopping', 'Restaurants']
+                Therefore, we can represent these complementors in the following dictionnary ('nameOfTheCategoryComplementor': numberOfTimesItIsInThisPreviousList)
+                {'Shopping': 2, 'Food': 2, 'Fast Food': 2, 'Pizza': 2, 'Bars': 1, 'Chinese': 1, 'Burgers': 1, 'American (Traditional)': 1, 'Italian': 1, 'Restaurants': 1, 'Nightlife': 1, 'Mexican': 1, 'Sandwiches': 1}
+
+                So now, if we have a business complementor which has the following categories: ['Food', 'Italian', 'Restaurants'].
+                The value of strenghOfComplementorCategories is  2+1+1 = 4
+                """
+                strenghOfComplementorCategories = 0
+                for category in business["categories"]:
+                    if counterOfMatchingCategoriesName.has_key(category):
+                        strenghOfComplementorCategories += counterOfMatchingCategoriesName[category]
                 icon = 'static/img/star.png'
-                goodForOpportunity += (np.log(business["stars"]) + 0.1)*np.log(business["review_count"])
+                business["competitor"] = False
+
+                scoreOfThisBusiness = strenghOfComplementorCategories*(np.log(business["stars"]) + 0.1)*np.log(business["review_count"])
+                if scoreOfThisBusiness < 1:
+                    goodForOpportunity += 1
+                else:
+                    goodForOpportunity += scoreOfThisBusiness
+
+
             business["icon"] = icon
-            newDictForThisClusterID[pointTuple] = business
-        dictOfClustersOfCluster[clusterID] = newDictForThisClusterID
+            listOfBusinessForThisClusterID.append(business)
+        dictOfClustersOfCluster[clusterID] = listOfBusinessForThisClusterID
         if badForOpportunity != 0:
             ratio = float(goodForOpportunity) / float(badForOpportunity)
         else:
             ratio = goodForOpportunity
-
         dictOfRatios[clusterID] = ratio
-        print ratio, goodForOpportunity, badForOpportunity, len(dictOfClustersOfCluster[clusterID])
 
     #listOfRatiosSorted = sorted(listOfRatios.items(), key=operator.itemgetter(1)).reverse()
     if len(dictOfRatios) < int(numberOfOpportunities):
         numberOfOpportunities = len(dictOfRatios)
     topDict = dict(sorted(dictOfRatios.iteritems(), key=operator.itemgetter(1), reverse=True)[:int(numberOfOpportunities)])
 
+    topList = sorted(dictOfRatios.iteritems(), key=operator.itemgetter(1), reverse=True)[:int(numberOfOpportunities)]
     dictOfOpportunities = {}
+    listOfOpportunities = [] # list Of opportunities contains the ratio and is ranked by ratio. It's used to show the top areas.
+
 
     topDictSet = set(topDict)
     dictOfClustersOfClusterSet = set(dictOfClustersOfCluster)
@@ -246,44 +278,38 @@ def getBestBusinessesOpportunities(conn, cursor, categories, distanceCluster, nu
         if dictOfRatios[clustersID] > 0: #We don't want to show the bad opportunities (more badForOpportunity than goodForOpportunity
             dictOfOpportunities[clustersID] = dictOfClustersOfCluster[clustersID]
 
-    print len(dictOfOpportunities)
+
     t2 = time.time()
 
-    print "--------"
     for clusterID in dictOfOpportunities:
         dictOfBusinessesForThisCluster = {}
-        for point in dictOfOpportunities[clusterID]:
-            business =  dictOfOpportunities[clusterID][point]
-            """
-            pointLatitude = point[0]
-            pointLongitude = point[1]
-            business = listOfBusinesses[[(x[1],x[2]) for x in listOfBusinesses].index((pointLatitude, pointLongitude))]
-            businessID = business[0]
-            businessName =  filter(lambda x: x in string.printable, business[3])
-            businessCategories = business[4]
-            if bool(set(businessCategories) & set(categories)) : #If they share a category in common then it will not be an opportunity but a warning
-                icon = 'static/img/warning.png'
-            else:
-                icon = 'static/img/star.png'
-            """
+        for business in dictOfOpportunities[clusterID]:
             dictOfBusinessesForThisCluster[business["business_id"]] = {
                 "categories": (', ').join(business["categories"]),
                 "name": business["name"],
-                "latitude": point[0],
-                "longitude": point[1],
+                "latitude": business["latitude"],
+                "longitude": business["longitude"],
                 "icon": business["icon"],
                 "review_count": int(business["review_count"]),
-                "stars": business["stars"]
+                "stars": business["stars"],
+                "competitor": business["competitor"]
             }
         dictOfOpportunities[clusterID] = dictOfBusinessesForThisCluster
 
+    for tupleClusterIDAndRatio in topList:
+        clusterID = tupleClusterIDAndRatio[0]
+        ratio = tupleClusterIDAndRatio[1]
+        dictOfBusinessesForThisCluster = {"cluster": dictOfOpportunities[clusterID], "ratio": ratio}
+        listOfOpportunities.append(dictOfBusinessesForThisCluster)
+
     t3 = time.time()
-    print t3 - t2
+    print str(float(t3 - t2)) + " seconds"
     print "---"
 
 
     t1 = time.time()
-    print t1 - t0
+    print str(float(t1 - t0)) + " seconds"
+    print "---"
 
 
-    return [dictOfOpportunities, matchingCategoryResults, numberOfOpportunities, uniqueListOfMatchingCategories]
+    return [dictOfOpportunities, matchingCategoryResults, numberOfOpportunities, uniqueListOfMatchingCategories, counterOfMatchingCategoriesNameWithoutInitialCategories, listOfOpportunities]

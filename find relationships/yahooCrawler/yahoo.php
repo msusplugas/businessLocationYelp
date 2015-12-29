@@ -3,7 +3,13 @@
  * Import the array of categories for a state and then we make a yahoo request for each category
  *  we store the 50 results per request in a csv file.
  */
-$csvFileNameInput = 'categoriesAZ.csv';
+
+$state = 'NV';
+$city = "Las Vegas";
+
+$csvFileNameInput = '../resultsFound/yahooCrawler/categories' . $state . '.csv';
+$csvFileNameOutput = '../resultsFound/yahooCrawler/categories' . $state . 'WithUrl.csv';
+
 
 $arrayCategories = [];
 
@@ -20,7 +26,6 @@ fclose($file);
 require("OAuth.php");
 
 
-$csvFileNameOutput = 'categoriesAZWithUrl.csv';
 $myFile = fopen($csvFileNameOutput, "w") or die("Unable to open file!");
 $counter = 0;
 
@@ -33,12 +38,12 @@ foreach ($arrayCategories as $category) {
 
     $category = str_replace("\\", "", $category); // We remove the backslash
 
-    $cc_key  = "yourKey";
-    $cc_secret = "yourSecret";
+    $cc_key  = "YOUR_KEY";
+    $cc_secret = "YOUR_SECRET";
     $url = "https://yboss.yahooapis.com/ysearch/news,web,images";
     $args = [];
     $args["format"] = "json";
-    $args["q"] = $category . " in Phoenix";
+    $args["q"] = $category . " in " . $city;
     $counter += 1;
     print_r($counter . ": " . $args["q"] ."\n");
 
@@ -68,25 +73,8 @@ foreach ($arrayCategories as $category) {
 
     fwrite($myFile, $data);
 
-    sleep(0.1);
+    sleep(0.5);
 }
 
 fclose($myFile);
-
-//print_r($results);
-
-/*
-$myFile = fopen("yahoo.txt", "w") or die("Unable to open file!");
-$firstColumn = "'" . $query . "'" . ',';
-fwrite($myFile, $firstColumn);
-
-foreach ($results['bossresponse']['web']['results'] as $key=>$value) {
-    $data = "'".$value['url'] ."'" . ',';
-    fwrite($myFile, $data);
-}
-
-
-
-fclose($myFile);
-*/
 ?>

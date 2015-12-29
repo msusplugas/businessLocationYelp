@@ -24,13 +24,13 @@ def timeout_handler(signum, frame):   # Custom signal handler
 # Change the behavior of SIGALRM
 signal.signal(signal.SIGALRM, timeout_handler)
 
+state = 'NV'
 
 
+csvWithUrlInputFileName = '../resultsFound/yahooCrawler/categories' + state + 'WithUrl.csv'
+csvExtendedCategoriesInputFileName = '../resultsFound/yahooCrawler/categories' + state + 'ExtendedCategoriesWith025Improved2.csv'
 
-csvWithUrlInputFileName = '../resultsFound/yahooCrawler/categoriesAZWithUrl.csv'
-csvExtendedCategoriesInputFileName = '../resultsFound/yahooCrawler/categoriesAZExtendedCategoriesWith025Improved2.csv'
-
-csvMatchingCategoriesOutputFileName = '../resultsFound/yahooCrawler/matchingCategoriesAZImproved.csv'
+csvMatchingCategoriesOutputFileName = '../resultsFound/yahooCrawler/matchingCategories' + state + '.csv'
 
 dictOfCategoriesWithUrl = {}
 listOfCategories = []

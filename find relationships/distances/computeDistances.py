@@ -9,7 +9,7 @@ import numpy
 """
 Insert the businesses in a grid of a size lengthOfTheGrid x lengthOfTheGrid
 """
-lengthOfTheGrid = 100
+lengthOfTheGrid = 50 #We used 100 for arizona and  50 for nevada, so the size of the cell remains similar
 
 """
 Insert all the businesses of dictOfBusinesses into a grid of length: lengthOfTheGrid

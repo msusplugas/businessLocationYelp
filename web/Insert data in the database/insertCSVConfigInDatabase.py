@@ -3,24 +3,69 @@ Read the csv config file and insert the data in the database
 """
 import psycopg2
 import simplejson as json
-import sys
 import csv
 
-datasetPath = '../dataset/yelp_academic_dataset_business.json'
+datasetPath = '../../find relationships/dataset/yelp_academic_dataset_business.json'
 
-conn_string = "host='localhost' dbname='mydb' user='postgres' password='YourPassword'"
+conn_string = "host='localhost' dbname='dbname' user='user' password='password'"
 tableBusinessesName = ''
 
 conn = psycopg2.connect(conn_string)
 cursor = conn.cursor()
 
-def insertBusinesses(conn, cursor):
+def createBusinessesTable(state):
+    query = ("CREATE TABLE businesses" + state + " "
+        "( "
+          "business_id text, "
+          "id serial NOT NULL, "
+          "categories text[], "
+          "latitude real, "
+          "longitude real, "
+          "stars real, "
+          "review_count real, "
+          "name text, "
+          "CONSTRAINT businesses" + state + "_pkey PRIMARY KEY (id), "
+          "CONSTRAINT businesses" + state + "_business_id_key UNIQUE (business_id) "
+        ") "
+        "WITH ( "
+          "OIDS=FALSE "
+        "); "
+        "ALTER TABLE businesses" + state + " "
+          "OWNER TO postgres; ")
+
+    cursor.execute(query)
+    conn.commit()
+
+def createMatchingCategoriesTable(state):
+    query = ("CREATE TABLE matchingcategories" + state + " "
+        "("
+          "id serial NOT NULL, "
+          "initialcategory text, "
+          "matchingcategoryname text, "
+          "matchingcategoryfrequency integer, "
+          "matchingcategorymediandistance real, "
+          "initialcategoryandmatchingcategorycount integer, "
+          "initialcategorycount integer, "
+          "matchingcategorycount integer, "
+          "CONSTRAINT matchingcategories" + state + "_pkey PRIMARY KEY (id) "
+        ") "
+        "WITH ( "
+          "OIDS=FALSE "
+        "); "
+        "ALTER TABLE matchingcategories" + state + " "
+          "OWNER TO postgres; ")
+
+    cursor.execute(query)
+
+    conn.commit()
+
+def insertBusinesses(state):
     j = 0
     with open(datasetPath) as fin:
         for line in fin:
             line_contents = json.loads(line)
-            state = line_contents["state"]
-            if state == "AZ":
+            stateBusiness = line_contents["state"]
+            if stateBusiness == state:
                 j += 1
                 print j
                 categories = line_contents["categories"]
@@ -31,14 +76,9 @@ def insertBusinesses(conn, cursor):
                 review_count = line_contents['review_count']
                 name = line_contents['name']
 
-                #die()
 
-                cursor.execute("INSERT INTO businesses (business_id, categories, latitude, longitude,stars, review_count, name) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                cursor.execute("INSERT INTO businesses" + state + " (business_id, categories, latitude, longitude,stars, review_count, name) VALUES (%s, %s, %s, %s, %s, %s, %s)",
               (business_id,categories, latitude,longitude,stars, review_count, name,))
-
-                #cursor.execute("INSERT INTO businesses (business_id, categories, latitude, longitude, stars, review_count, name) VALUES (%s, %f, %f, %f, %f, %f, %s)",
-                #(business_id, latitude, longitude, stars, review_count, name,))
-
 
 
     conn.commit()
@@ -64,8 +104,8 @@ def insertCategories():
     conn.commit()
 
 
-def insertMatchingCategories():
-    csvMatchingCategoriesInputFileName = "../filters/filter-90-10-10-10.csv"
+def insertMatchingCategories(state):
+    csvMatchingCategoriesInputFileName = "../../find relationships/resultsFound/filters/filter-" + state + ".csv"
     dictOfCategories = {}
 
     with open(csvMatchingCategoriesInputFileName) as csvfile:
@@ -105,7 +145,7 @@ def insertMatchingCategories():
             categoryBCount = dictOfCategories[initialCategory][matchingCategory]["categoryBCount"]
             print initialCategory, frequency, medianDistance, categoryAAndBCount, categoryACount, categoryBCount
 
-            cursor.execute("INSERT INTO matchingcategories (initialcategory, matchingcategoryname, matchingcategoryfrequency, "
+            cursor.execute("INSERT INTO matchingcategories" + state + " (initialcategory, matchingcategoryname, matchingcategoryfrequency, "
                            "matchingcategorymediandistance, initialcategoryandmatchingcategorycount, initialcategorycount,"
                            "matchingcategorycount) VALUES (%s, %s, %s, %s, %s, %s, %s)",
             (initialCategory, matchingCategory, frequency, medianDistance, categoryAAndBCount, categoryACount, categoryBCount))

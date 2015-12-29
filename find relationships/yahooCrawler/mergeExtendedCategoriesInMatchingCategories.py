@@ -13,11 +13,12 @@ def convertAnExtendedCategoryToListOfCategories(extendedCategory, dictOfExtended
             contained.append(category)
     return contained
 
+state = 'NV'
 
-csvMatchingCategorieslInputFileName = '../resultsFound/yahooCrawler/matchingCategoriesAZ.csv'
-csvExtendedCategoriesInputFileName = '../resultsFound/yahooCrawler/categoriesAZExtendedCategoriesWith025Improved2.csv'
+csvMatchingCategorieslInputFileName = '../resultsFound/yahooCrawler/matchingCategories' + state +  '.csv'
+csvExtendedCategoriesInputFileName = '../resultsFound/yahooCrawler/categories' + state +  'ExtendedCategoriesWith025Improved2.csv'
 
-csvStatMatchingCategoriesMergedOutputFileName = '../resultsFound/yahooCrawler/statsMatchingCategoriesMergedAZImproved.csv'
+csvStatMatchingCategoriesMergedOutputFileName = '../resultsFound/yahooCrawler/statsMatchingCategoriesMerged' + state +  '.csv'
 
 dictOfOldMatchingCategories = {}
 dictOfExtendedCategories = {}

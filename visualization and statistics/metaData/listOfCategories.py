@@ -4,12 +4,12 @@ import simplejson as json
 maxCat = 0
 dictOfCategories = {}
 
-datasetPath = '../dataset/yelp_academic_dataset_business.json'
+datasetPath = '../../find relationships/dataset/yelp_academic_dataset_business.json'
 i = 0
 with open(datasetPath) as fin:
     for line in fin:
         line_contents = json.loads(line)
-        if line_contents['state'] == "AZ":
+        if line_contents['state'] == "NV":
             i += 1
 
             categories = line_contents["categories"]

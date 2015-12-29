@@ -7,7 +7,7 @@ import json
 import csv
 from collections import namedtuple
 
-state = "AZ"
+state = "NV"
 
 dictOfBusinessesPerId = {}
 dictOfCategoriesTuple = {}
@@ -16,9 +16,9 @@ Categories = namedtuple("Categories", ["categoryA","categoryB"])
 
 
 jsonDatasetInputFileName = '../dataset/yelp_academic_dataset_business.json'
-csvMedianDistancesAndMatchingCategoriesFrequenciesInputFileName = '../resultsFound/distances/medianDistancesAndMatchingCategoriesFrequencies.csv'
+csvMedianDistancesAndMatchingCategoriesFrequenciesInputFileName = '../resultsFound/distances/medianDistancesAndMatchingCategoriesFrequencies' + state +'.csv'
 
-csvMedianDistancesAndMatchingCategoriesFrequenciesWithCategoriesCountOutputFileName = '../resultsFound/filters/categoriesCountMedianDistancesAndMatchingCategoriesFrequencies.csv'
+csvMedianDistancesAndMatchingCategoriesFrequenciesWithCategoriesCountOutputFileName = '../resultsFound/filters/categoriesCountMedianDistancesAndMatchingCategoriesFrequencies' + state +'.csv'
 
 # First we import the yelp dataset json file and we add everything in a dictionnary of categories
 with open(jsonDatasetInputFileName) as fin:

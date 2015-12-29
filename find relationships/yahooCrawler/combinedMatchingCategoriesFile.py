@@ -3,10 +3,12 @@ Read the two matching categories file and merge them
 """
 import csv
 
-csvNewMatchingCategoriesInputFileName = '../resultsFound/yahooCrawler/newMatchingCategoriesAZ.csv'
-csvMatchingCategoriesInputFileName = '../resultsFound/yahooCrawler/matchingCategoriesAZ.csv'
+state = 'NV'
 
-csvCombinedMatchingCategoriesOutputName = '../resultsFound/yahooCrawler/combinedMatchingCategoriesAZ.csv'
+csvNewMatchingCategoriesInputFileName = '../resultsFound/yahooCrawler/newMatchingCategories' + state + '.csv'
+csvMatchingCategoriesInputFileName = '../resultsFound/yahooCrawler/matchingCategories' + state + '.csv'
+
+csvCombinedMatchingCategoriesOutputName = '../resultsFound/yahooCrawler/combinedMatchingCategories' + state + '.csv'
 
 dictOfNewMatchingCategories = {}
 dictOfMergeMatchingCategories = {}

@@ -9,13 +9,13 @@ import computeDistances
 from operator import itemgetter
 
 
-state = "AZ"
+state = "NV"
 Categories = namedtuple("Categories", ["categoryA","categoryB"])
 
-csvStatMatchingCategoriesMergedInputFileName = '../resultsFound/yahooCrawler/statsMatchingCategoriesMergedAZ.csv'
+csvStatMatchingCategoriesMergedInputFileName = '../resultsFound/yahooCrawler/statsMatchingCategoriesMerged' + state +'.csv'
 jsonDatasetInputFileName = '../dataset/yelp_academic_dataset_business.json'
 
-csvMedianDistancesAndMatchingCategoriesFrequenciesOutputFileName = '../resultsFound/distances/medianDistancesAndMatchingCategoriesFrequencies.csv'
+csvMedianDistancesAndMatchingCategoriesFrequenciesOutputFileName = '../resultsFound/distances/medianDistancesAndMatchingCategoriesFrequencies' + state +'.csv'
 
 dictOfMatchingCategories = {}
 dictOfBusinesses = {}

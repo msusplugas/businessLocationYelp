@@ -4,11 +4,11 @@ Find the categories used in the Yelp dataset and write them in a csv file
 import simplejson as json
 
 listOfCategories = []
-state = "AZ"
+state = "NV"
 
 
 datasetPath = '../dataset/yelp_academic_dataset_business.json'
-csvOutputFileName = '../resultsFound/yahooCrawler/categoriesAZ.csv'
+csvOutputFileName = '../resultsFound/yahooCrawler/categories' + state + '.csv'
 
 with open(datasetPath) as fin:
     for line in fin:

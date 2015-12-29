@@ -16,8 +16,10 @@ import  time
 
 maxDistanceParameter = 0.25
 
-csvInputFileName = '../resultsFound/yahooCrawler/categoriesAZWithUrl.csv'
-csvOutputFileName = '../resultsFound/yahooCrawler/categoriesAZExtendedCategoriesWith025Improved2.csv'
+state = 'NV'
+
+csvInputFileName = '../resultsFound/yahooCrawler/categories' + state + 'WithUrl.csv'
+csvOutputFileName = '../resultsFound/yahooCrawler/categories' + state + 'ExtendedCategoriesWith025Improved2.csv'
 
 dictOfCategories = {}
 

@@ -48,7 +48,7 @@
     <script type=text/javascript>
     function recommendDistance() {
     console.log("Get Recommended Distance");
-    if ($(".chosen-select").val() != '' && $(".chosen-select").val() != null) {
+    if ($(".chosen-select").val() != '' && $(".chosen-select").val() != null && $('#city').val() != "Select the city") {
         keywordsVar = $(".chosen-select").val().join("-----");
     }
     else {
@@ -57,12 +57,122 @@
     }
       $.getJSON($SCRIPT_ROOT + '/_recommend_distance', {
         keywords: keywordsVar,
+        city: $('#city').val()
       }, function(data) {
         $("#distance").val(parseInt(data.result));
       });
       return false;
     }
 </script>
+    <script type="text/javascript">
+        function validateForm() {
+        validate = true;
+        if  ( $(".chosen-select").val() == null) {
+         alert("Please select at least one category");
+         validate = false;
+         }
+         if  (  $("#numberOfOpportunities").val() == "") {
+         alert("Please select a number of opportunities");
+         validate = false;
+         }
+         if  (  $("#distance").val() == "") {
+         alert("Please select a distance or click on Recommend Me");
+         validate = false;
+         }
+         console.log(validate)
+         if (validate) {
+         loading();
+        }
+        else {
+            event.preventDefault();
+        }
+        }
+    </script>
+
+    <script type="text/javascript">
+    $(function() {
+
+        $("#matchingCategoriesInfoButton").click(function() {
+          $("#matchingCategoriesInfo").toggle("slow");
+        });
+
+
+        $("#bestMatchingCategoriesInfoButton").click(function() {
+          $("#bestMatchingCategoriesInfo").toggle("slow");
+        });
+
+        $("#opportunitiesDetailsButton").click(function() {
+          $("#opportunitiesDetails").toggle("slow");
+        });
+
+    });
+    </script>
+
+    <script type="text/javascript">
+        var replaceHtmlEntites = (function() {
+        var translate_re = /&(nbsp|amp|quot|lt|gt);/g,
+            translate = {
+                'nbsp': String.fromCharCode(160),
+                'amp' : '&',
+                'quot': '"',
+                'lt'  : '<',
+                'gt'  : '>'
+            },
+            translator = function($0, $1) {
+                return translate[$1];
+            };
+
+        return function(s) {
+            return s.replace(translate_re, translator);
+        };
+    })();
+
+        function checkIfCityIsSelected() {
+            if ($('#city').val() != "Phoenix" && $('#city').val()  != "Las Vegas") {
+                window.alert("Please select the city before the keywords");
+            }
+            else {
+            }
+        }
+
+
+            var phoenixCategories = [];
+            {% for category in categoriesAZ|sort(true, attribute=1) %}
+                phoenixCategories.push(replaceHtmlEntites("{{category[0]}}"));
+            {% endfor %}
+
+            var lasVegasCategories = [];
+            {% for category in categoriesNV|sort(true, attribute=1) %}
+                lasVegasCategories.push(replaceHtmlEntites("{{category[0]}}"));
+            {% endfor %}
+
+        function generateKeywordsForCity() {
+
+            if ($('#city').val() == "Phoenix") {
+                console.log("City changed to Phoenix");
+                $('#keywords').empty();
+
+                    $.each(phoenixCategories, function(key, value) {
+                     $('#keywords')
+                         .append($("<option></option>")
+                         .text(value));
+                    });
+                $('#keywords').trigger("chosen:updated");
+            }
+            else if ($('#city').val() == "Las Vegas") {
+                console.log("City changed to Las Vegas");
+                $('#keywords').empty();
+
+                    $.each(lasVegasCategories, function(key, value) {
+                     $('#keywords')
+                         .append($("<option></option>")
+                         .text(value));
+                    });
+                $('#keywords').trigger("chosen:updated");
+            }
+        }
+
+    </script>
 
 
 
@@ -97,7 +207,7 @@
 <header id="top" class="header">
     <div class="text-vertical-center">
         <h1>Online Location-based Business Recommendation</h1>
-        <h3>This tool recommends the entrepreneurs where are the best location to build their businesses</h3>
+        <h3>This tool recommends the entrepreneurs the best location to build their businesses</h3>
         <br>
         <a href="#about" class="btn btn-dark btn-lg">Find Out More</a>
     </div>
@@ -109,9 +219,10 @@
         <div class="row">
             <div class="col-lg-8 col-md-offset-2">
                 <h2 class="text-center">How does it work?</h2>
-                <p class="lead">By using the <a href="http://www.yelp.com/dataset_challenge/">Yelp's dataset</a> we provide to the entrepreneurs recommendations on where to build their next businesses.</p>
-                <p>We have identified in this <a href="http://www.yelp.com/dataset_challenge/">Yelp's dataset</a> the key factors for a good business location according to its categories.</p>
-                <p>By looking at what are the current missing spots we will recommend you where to start your new business. Our current recommendation apply only for the city of Phoenix, Arizona.</p>
+                <p class="lead">By using the <a href="http://www.yelp.com/dataset_challenge/">Yelp's dataset</a>  we provide to the entrepreneurs recommendations where they can start their new business(es).</p>
+                <p>We have identified with <a href="http://www.yelp.com/dataset_challenge/">Yelp's dataset</a>, the influence one business has on success of other businesses in its vicinity.</p>
+                <p>We look at the current missing spots to recommend you the best locations for your new business. Our current recommendation apply only for the cities of Phoenix (Arizona/USA) and Las Vegas (Nevada/USA).</p>
+                <p>Therefore, the results are based on identifying the clusters of complementing businesses. For example, if in a cluster of complementing categories of <i>[“Restaurants”, “Bars”, “Cinema”]</i> a <i>Cinema</i> is missing, we identify that spot as one of the ideal location.</p>
             </div>
         </div>
         <!-- /.row -->
@@ -128,37 +239,52 @@
     <div class="container">
         <div class="row">
             <div class="col-lg-8 col-md-offset-2">
-                <h2 class="text-center">Our Recommender Tool</h2>
+                <h2 class="text-center">Recommender Tool</h2>
                 <div class="row">
 
                     <form action="{{ url_for('results') }}" method=post>
                         <div class="form-group">
-                            <label for="keywords">Please enter the keywords to describe your business.</label> <br />
+                            <label for="city">Select the city where you want to open your business.</label> <br />
+                            <select onchange="generateKeywordsForCity()" name="city" id="city" class="form-control">
+                                <option {% if citySelected == false %} selected {% endif %} disabled>Select the city</option>
 
-                            <select name="keywords" id="keywords" data-placeholder="Choose the categories..." class="chosen-select" multiple style="width:500px;" tabindex="4">
-                                {% for category in categories|sort(true, attribute=1) %}
-                                {% if category[2] %}
-                                <option selected>{{ category.0 }}</option>
-                                {% else %}
-                                <option>{{ category.0 }}</option>
-                                {% endif %}
+                                {% for city in listOfCities %}
+                                      <option {% if citySelected == city %} selected {% endif %} value="{{city}}">{{city}}</option>
                                 {% endfor %}
                             </select>
                         </div>
+                        <div onclick="checkIfCityIsSelected();" class="form-group">
+                            <label for="keywords">Please enter the keywords that describe the business you want to open.</label> <br />
+                            <select name="keywords" id="keywords" data-placeholder="Choose the categories..." class="chosen-select" multiple style="width:500px;" tabindex="4">
+
+                                    {% for category in listOfCategoriesImproved|sort(true, attribute=1) %}
+                                        {% if category[2] %}
+                                            <option selected>{{ category.0 }}</option>
+                                        {% else %}
+                                            <option>{{ category.0 }}</option>
+                                        {% endif %}
+
+                                    {% endfor %}
+
+
+
+                            </select>
+                        </div>
                         <div class="form-group">
-                            <label for="numberOfOpportunities">Please enter the number of opportunities that you would like to see in the map.</label>
+                            <label for="numberOfOpportunities">Please enter the number of ideal locations you wish to identify to open your new business.</label>
                             <input name="numberOfOpportunities" value="{{ numberOfOpportunities }}" type="number" class="form-control" id="numberOfOpportunities" placeholder="example: 10">
                         </div>
 
                         <div class="form-group">
-                            <label for="distance">Please enter the maximum distance in meters that you want to have between your business and your competitors or other important businesses. By clicking on Recommend Me, our algorithm will select the best distance according to the keywords that you have selected before.</label>
+                            <label for="distance">Please enter the maximum distance in meters that you want to have between 1) your business and its competitors, and 2) any other business that positively influence the success of your business (complementors). <br />
+                                If you click on the blue "Recommend Me" button, our algorithm will select the best distance according to the keywords that you have selected before.</label>
                             <div style="display: inline;">
                                 <input style="display: inline;" name="distance" value="{{distance}}" type="number" class="form-control" id="distance" placeholder="example: 150">
                                 <button style="margin-bottom: 3px;" class="btn btn-info btn-default form-control" type="button" onclick="recommendDistance()">Recommend Me</button>
                             </div>
                         </div>
 
-                        <input class="btn btn-default"  onclick="loading();" style="color: black;" type="submit" />
+                        <input class="btn btn-default" onclick="validateForm();" style="color: black;" type="submit" />
                     </form>
 
                     <script src="{{ url_for('static', filename='js/chosen.jquery.js') }}"   type="text/javascript"></script>
@@ -192,20 +318,8 @@
                 <div class="col-lg-8 col-md-offset-2">
                     <hr />
                     <p>
-                        We have selected the {{ numberOfOpportunities }} best areas to build your business. We recommend to build your business close to the businesses of these categories:
-                    <ul>
-                        {% for uniqueMatchingCategory in uniqueListOfMatchingCategories %}
-                        <li>
-                            {{ uniqueMatchingCategory }}
-                        </li>
-                        {% endfor %}
-
-                    </ul>
-                    </p>
-                    <p>
-                        We indicate in the map below your potential competitors with the warning icon <img src="static/img/warning.png" />.
-                        A potential competitor can also be an advantage for your company because the aggregation of competitors can increase your number of customers. <br />
-                        The businesses that are good complementors for your business are indicated with a star icon <img src="static/img/star.png" />
+                        We indicate in the map below your potential competitors with the an icon <img src="static/img/warning.png" />. The businesses that are complementors for your business are indicated with an icon <img src="static/img/star.png" />.  <br />
+                        The colored circles on the map represent the indensity of the businesses. Each related business (competitor or complementor) is represented with an icon and a circle. The more dark is the color is, the more appropriate is the business to be open.
                     </p>
                 </div>
             </div>
@@ -249,7 +363,7 @@ document.getElementById('recommender').scrollIntoView()
 
     var map = new google.maps.Map(document.getElementById('map'), {
     zoom: 9,
-    center: new google.maps.LatLng(33.5, -112),
+    center: new google.maps.LatLng({% if citySelected == "Phoenix" %} 33.5, -112 {% elif citySelected == "Las Vegas" %} 36.12, -115.17 {% endif %}),
       mapTypeId: google.maps.MapTypeId.ROADMAP
     });
 
@@ -291,11 +405,8 @@ document.getElementById('recommender').scrollIntoView()
         }
 
 {% endfor %}
-
-
-
-
 </script>
+
 
         <div class="container">
 
@@ -303,35 +414,162 @@ document.getElementById('recommender').scrollIntoView()
                 <div class="col-lg-8 col-md-offset-2">
                     <div class="text-center">
                         <h2>More information</h2>
-
                     </div>
-                    <p>
-                        There are {{ numberOfOpportunities }} opportunities according to your criterias
-                    </p>
-                    <p>
-                    <ul>
-                        {% for matchingCategory in matchingCategories %}
-                        <li>The category <strong>{{ matchingCategory[3] }}</strong> is associated with the category <strong>{{ matchingCategory[0] }}</strong> and has a median distance of <strong>{{ matchingCategory[1] }} meters</strong> <br /></li>
-                        {% endfor %}
-                    </ul>
+
+
+
+                    <div  class="text-center">
+                        <button id="opportunitiesDetailsButton">Show/Hide information about the ideal locations shown in the map above</button>
+                    </div>
+
+                    <div style="display:none;" id="opportunitiesDetails">
+                        <p>
+                            We have selected the top {{businessOpportunities|length}} ideal locations for your business. The list is sorted by the grade of the areas; the higher the grade, the better is this area for your business.
+                        </p>
+                        {% set areaNumber = 0 %}
+                            {% for cluster in listOfOpportunities %}
+
+                                {% set areaNumber = areaNumber + 1 %}
+                                <h3>Top area {{ areaNumber }}/{{listOfOpportunities|length}} recommended</h3>
+                                This area has the grade <strong>{{cluster["ratio"]|round(2, 'floor')}}</strong> and contains {{ cluster["cluster"]|length }} businesses that influence the success of your business::
+                                <ul>
+                                    {% for businessID in cluster["cluster"] %}
+                                    <li>
+                                       <strong>{{ cluster["cluster"][businessID]["name"] }}</strong>: a <strong>
+                                        {% if cluster["cluster"][businessID]["competitor"] %}
+                                            competitor
+                                        {% else %}
+                                            complementor
+                                        {%endif %}</strong> <img style="height:16px" src='{{ cluster["cluster"][businessID]["icon"] }}' />
+                                        of categories <i>{{ cluster["cluster"][businessID]["categories"] }}</i>.
+                                        This business has a star rating of {{ cluster["cluster"][businessID]["stars"] }}/5 on average with {{ cluster["cluster"][businessID]["review_count"] }} reviews
+                                    </li>
+                                    {% endfor %}
+
+                                    <button onclick="
+                                    $(map{{areaNumber}}).slideToggle();
+                                    setTimeout(function(){
+                                        init_map{{areaNumber}}();
+                                        google.maps.event.trigger(map{{areaNumber}}, 'resize');
+                                    }, 300);
+">Show/Hide the map that contains the businesses of the area {{areaNumber}}</button>
+
+        <div id="map{{areaNumber}}" style="
+        position: relative;
+        display: none;
+    height: 300px;
+    width: 100%;
+    color: back;
+    "></div>
+
+
+        <script type="text/javascript">
+function init_map{{areaNumber}}() {
+           var locations = [
+{% for businessID in cluster["cluster"] %}
+                    ['Business of category: "{{ cluster["cluster"][businessID]["categories"] }}" called "{{ cluster["cluster"][businessID]["name"] }}". This business has a star rating of {{ cluster["cluster"][businessID]["stars"] }}/5 on average with {{ cluster["cluster"][businessID]["review_count"] }} reviews',
+                    {{ cluster["cluster"][businessID]["latitude"] }}, {{  cluster["cluster"][businessID]["longitude"] }},
+                    '{{ cluster["cluster"][businessID]["icon"] }}'
+                    ] ,
+           {% endfor %}
+            ];
+
+
+
+        var markers = [];
+
+    var map = new google.maps.Map(document.getElementById('map{{areaNumber}}'), {
+    zoom: 9,
+    center: new google.maps.LatLng({% if citySelected == "Phoenix" %} 33.5, -112 {% elif citySelected == "Las Vegas" %} 36.12, -115.17 {% endif %}),
+      mapTypeId: google.maps.MapTypeId.ROADMAP
+    });
+
+
+    var infowindow = new google.maps.InfoWindow();
+
+
+    randomColor = "#" + Math.random().toString(16).slice(2, 8)
+
+    var marker, i, center;
+        for (i = 0; i < locations.length; i++) {
+            center = new google.maps.LatLng(locations[i][1], locations[i][2]);
+            marker = new google.maps.Marker({
+                position: center,
+                map: map,
+                icon: locations[i][3]
+
+            });
+        markers.push(marker);
+            var circle = new google.maps.Circle({
+                center: center,
+                map:map,
+                radius: {{ distance }},
+                strokeColor: randomColor,
+                strokeOpacity:0.5,
+                strokeWeight: 2,
+                fillColor: randomColor
+            });
+            circle.bindTo('center',marker,'position');
+            google.maps.event.addListener(marker, 'click', (function(marker, i) {
+                return function() {
+                    infowindow.setContent(locations[i][0]);
+                    infowindow.open(map, marker);
+                };
+            })(marker, i));
+        }
+
+
+
+}
+</script>
+                                </ul>
+                            {% endfor %}
+                    </div>
+
+
+
+                    <div  class="text-center">
+                        <button id="bestMatchingCategoriesInfoButton">Show/Hide information about the best complementors of your business</button>
+                    </div>
+
+                    <div style="display:none;" id="bestMatchingCategoriesInfo">
+                        <p>
+                            There are {{ counterOfMatchingCategoriesNameWithoutInitialCategories | length }} different complementors categories for your business according to the keywords you provided. The higher is the coefficient, the better it is for your business to be close to a business of this category..<br />
+                            Your complementors are:
+                        </p>
+                        <ul>
+                            {% for matchingCategory in counterOfMatchingCategoriesNameWithoutInitialCategories|dictsort(false, 'value')|reverse %}
+                                <li>
+                                    <strong>{{ matchingCategory[0] }}</strong> with a coefficient of <strong>{{matchingCategory[1]}}</strong>.
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+
+
+                    <div  class="text-center">
+                        <button id="matchingCategoriesInfoButton">Show/Hide information about the complementors of your business (full list with details)</button>
+                    </div>
+
+                    <div style="display:none;" id="matchingCategoriesInfo">
+                        <p>
+                            There are {{ matchingCategories | length }} complementors categories for your business according to your criterias:
+                        </p>
+                        <ul>
+                            {% for matchingCategory in matchingCategories %}
+                            <li>The category <strong>{{ matchingCategory[3] }}</strong> is associated with the category <strong>{{ matchingCategory[0] }}</strong> and has a median distance of <strong>{{ matchingCategory[1] }} meters</strong> <br /></li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+
+
+
                 </div>
                 {% endif %}
             </div>
         </div>
+    </div>
 </section>
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -347,7 +585,9 @@ document.getElementById('recommender').scrollIntoView()
                     The project try to answers the challenges that can be solved using the <a href="http://www.yelp.com/dataset_challenge/">Yelp's dataset</a> for the round five of the contest.
                 </p>
                 <p>
-                    Michael Susplugas
+                    Michael Susplugas, ETH Zürich <br />
+                    Radhika Garg, Department of Informatics IFI, Communication Systems Group CSG, University of Zürich <br />
+                    Burkhard Stiller, Department of Informatics IFI, Communication Systems Group CSG, University of Zürich
                 </p>
                 <p> {% if loadingTime %}
                     Loaded in {{loadingTime}} seconds
