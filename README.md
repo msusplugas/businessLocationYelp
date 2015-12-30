@@ -2,7 +2,7 @@
 
 Welcome to the "Recommending Ideal Location for Business based on Yelp Dataset" repository. This repository contains the code that has been used to identify the relationships between the categories in Yelp and to show the results directtly to the users through our website.
 
-The paper that describe this project in details can be found here: michaelsusplugas.com/yelp/michael-susplugas-yelp-paper.pdf
+The paper that describe this project in details can be found here: http://www.michaelsusplugas.com/yelp/michael-susplugas-yelp-paper.pdf
 
 The website to see directly the results can be found here:
 http://www.michaelsusplugas.com/yelp
